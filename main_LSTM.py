@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import time
 import Load_data as ld
+import h5py
 # import seaborn as sns
 
 from keras.models import Sequential
@@ -94,7 +95,7 @@ def save_target_and_prediction(target, pred, title, SAVE_dir):
 def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
 
     # for i in range(len(date_list)):
-    for i in range(2):
+    for i in range(1):
 
         print("-----Training on " + str(date_list[i]) + "-----")
         training_start_time = time.time()
@@ -190,8 +191,8 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
         print("elapsed_time:{0}".format(tr_elapsed_time) + " [sec]")
 
     # error_lossの日を保存
-    with open(SAVE_dir + "test_loss.txt", "w") as f:
-        f.write(str(test_error_list))
+   #  with open(SAVE_dir + "test_loss.txt", "w") as f:
+   #      f.write(str(test_error_list))
     return model
 
 
@@ -203,7 +204,7 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     """
     def CNN_convLSTM(
             activation="relu",
-            loss="mean_squared_error",
+            loss="binary_crossentropy",
             optimizer="Adadelta",
             layer=0,
             height=0,
