@@ -15,7 +15,9 @@ matrix1.get_shape()[2]
 
 def conv/layer(inputs, kernel_size, stride, num_features, idx, linear=False):
     with tf.variable_scope('{0}_conv'.format(idx)) as scope:
-        input_channels = inputs.get_shape
+        input_channels = inputs.get_shape()[3]
+
+        weights = 
 
 
 
