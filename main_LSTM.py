@@ -351,6 +351,10 @@ def train_convLSTM_with_test(SAVE_dir):
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
         model.add(Convolution3D(filters=layer, kernel_size=(3, 3, layer),
                                 padding="same", data_format="channels_last"))
 
