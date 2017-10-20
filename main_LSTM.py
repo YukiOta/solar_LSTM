@@ -12,7 +12,7 @@ import h5py
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D, Convolution3D, ZeroPadding3D
 from keras.layers.core import Dense, Activation, Flatten, Dropout
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, TensorBoard
 from keras.optimizers import Adam, Adadelta, RMSprop
 from keras.layers.convolutional_recurrent import ConvLSTM2D
 from keras.layers.normalization import BatchNormalization
@@ -90,6 +90,33 @@ def save_target_and_prediction(target, pred, title, SAVE_dir):
     df = pd.concat([target_df, pred_df], axis=1)
     df.columns = ["TARGET", "PREDICTION"]
     df.to_csv(SAVE_dir + "Error_csv_" + title + ".csv")
+
+
+def array2LSTM(array_1, num_frame=15):
+    '''
+    input
+    -----------
+    array_1 (timesteps, 100, 100, 3)
+    output
+    -----------
+    array_2 (batch, num_frames, 100, 100, 3)
+    '''
+    count = 0
+    if array_1.ndim == 4:
+        print("add new axis")
+        array_1 = array_1[np.newaxis, :]
+    timesteps = array_1.shape[1]
+    for i in range(timesteps):
+        if i <= timesteps - num_frame:
+            tmp = array_1[:, i:i + num_frame, :, :, :]
+            if count == 0:
+                array_2 = tmp
+                count += 1
+            else:
+                array_2 = np.concatenate((array_2, tmp), axis=0)
+        else:
+            break
+    return array_2
 
 
 def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
@@ -174,7 +201,7 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
             score = model.evaluate(img_tmp, ts_target[:, 1], verbose=1)
             print("Evaluation " + date_list[i])
             print('TEST LOSS: ', score[0])
-            test_error_list.append(score[0])
+            # test_error_list.append(score[0])
         except:
             print("error in evaluation")
 
@@ -200,6 +227,11 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     """
     kerasでConvLSTMを実装する。
     input : img_tr, target_tr, date_list, SAVE_dir
+    img_tr : np.array (days, timesteps, height, width, layer)
+    target_tr :
+    date_list : daysのリスト
+    SAVE_dir : 結果を保存するディレクトリ
+    ------------------------
     out : img?
     """
     def CNN_convLSTM(
@@ -208,18 +240,241 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
             optimizer="Adadelta",
             layer=0,
             height=0,
-            width=0):
+            width=0,
+            days=0,
+            timesteps=0):
         """
         INPUT -> [CONV -> RELU] -> OUT
         """
         model = Sequential()
 
-        model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last"))
+        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last", input_shape=(timesteps, height, width, layer)))
+        # model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             input_shape=(None, height, width, layer),
+                             return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=3, padding='same',
-                             activation=activation, data_format="channels_last"))
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
         model.add(BatchNormalization())
-        model.add(Convolution3D(filters=1, kernel_size=2, ))
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(Convolution3D(filters=3, kernel_size=(3, 3, 3),
+                                padding="same", data_format="channels_last"))
 
-        model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+        model.compile(loss=loss, optimizer=optimizer)
         return model
+
+    """
+    データの読み込みとground truthの作成
+    画像は、(day, timstep, 100, 100, 3)で受け取ってる
+    """
+    num_frame = 15
+    for index in range(len(img_tr)):
+        img_tra = img_tr[index][:-1, :, :, :]
+        img_gt = img_tr[index][1:, :, :, :]
+        img_tmp_tr = array2LSTM(img_tra, num_frame)
+        img_tmp_gt = array2LSTM(img_gt, num_frame)
+        if index == 0:
+            img_train = img_tmp_tr
+            img_gtruth = img_tmp_gt
+        else:
+            img_train = np.concatenate((img_train, img_tmp_tr), axis=0)
+            img_gtruth = np.concatenate((img_gtruth, img_tmp_gt), axis=0)
+
+    """
+    データのトレーニング
+    """
+    days = img_train.shape[0]
+    timesteps = img_train.shape[1]
+    h = img_train.shape[2]
+    w = img_train.shape[3]
+    l = img_train.shape[4]
+
+    model = CNN_convLSTM(
+        activation="relu",
+        loss="binary_crossentropy",
+        optimizer="Adadelta",
+        height=h, width=w, layer=l, days=days, timesteps=timesteps
+    )
+    hist = model.fit(
+        img_train, img_gtruth, batch_size=10, epochs=100, validation_split=0.1, verbose=1, callbacks=[TensorBoard(log_dir='./log/solar')])
+    try:
+        model.save(SAVE_dir + "model_{}".format(str(date_list)) + ".h5")
+    except:
+        print("ahhhhhhh error in model.save")
+    return model
+
+
+def train_convLSTM_with_test(SAVE_dir):
+    """
+    kerasでConvLSTMを実装する。
+    input : SAVE_dir
+    SAVE_dir : 結果を保存するディレクトリ
+    ------------------------
+    out : img?
+    """
+    def CNN_convLSTM(
+            activation="relu",
+            loss="binary_crossentropy",
+            optimizer="Adadelta",
+            layer=0,
+            height=0,
+            width=0,
+            days=0,
+            timesteps=0):
+        """
+        INPUT -> [CONV -> RELU] -> OUT
+        """
+        model = Sequential()
+
+        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last", input_shape=(timesteps, height, width, layer)))
+        # model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             input_shape=(None, height, width, layer),
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(Convolution3D(filters=layer, kernel_size=(3, 3, layer),
+                                padding="same", data_format="channels_last"))
+
+        model.compile(loss=loss, optimizer=optimizer)
+        return model
+
+    def make_date():
+        '''
+        人工データの作成。
+        '''
+        # test
+        time = 15
+        row = 80
+        col = 80
+        filters = 1
+        training = 1200
+        train = np.zeros((training, time, row, col, 1), dtype=np.float)
+        gt = np.zeros((training, time, row, col, 1), dtype=np.float)
+        # for i in range(1000):
+        #    gt[::,0,0,0] = np.random.random()
+
+        for i in range(training):
+            n = np.random.randint(3, 8)
+            # n=15
+            for j in range(n):
+                xstart = np.random.randint(20, 60)
+                ystart = np.random.randint(20, 60)
+                directionx = np.random.randint(0, 3) - 1
+                directiony = np.random.randint(0, 3) - 1
+                directionx = np.random.randint(0, 3) - 1
+                gravity = 0  # np.random.randint(0,3) - 1
+                w = np.random.randint(2, 4)
+                # rint directionx,directiony
+                for t in range(time):
+                    # w = 2
+                    train[i, t, xstart + directionx * t - w:xstart + directionx * t + w,
+                          ystart + directiony * t + int(0.1 * gravity * t**2) - w:ystart + directiony * t + int(0.1 * gravity * t**2) + w, 0] += 1
+
+                    # Make it more robust
+                    # Noise
+                    if np.random.randint(0, 2):
+                        train[i, t, xstart + directionx * t - w - 1:xstart + directionx * t + w + 1,
+                              ystart + directiony * t + int(0.1 * gravity * t**2) - w - 1:ystart + directiony * t + int(0.1 * gravity * t**2) + w + 1, 0] += 0.1
+
+                    if np.random.randint(0, 2):
+                        train[i, t, xstart + directionx * t - w + 1:xstart + directionx * t + w - 1,
+                              ystart + directiony * t + int(0.1 * gravity * t**2) + w - 1:ystart + directiony * t + int(0.1 * gravity * t**2) + w - 1, 0] -= 0.1
+
+                    gt[i, t, xstart + directionx * (t + 1) - w:xstart + directionx * (t + 1) + w,
+                       ystart + directiony * (t + 1) + int(0.1 * gravity * (t + 1)**2) - w:ystart + directiony * (t + 1) + int(0.1 * gravity * (t + 1)**2) + w, 0] += 1
+
+        train = train[::, ::, 20:60, 20:60, ::]
+        gt = gt[::, ::, 20:60, 20:60, ::]
+        train[train >= 1] = 1
+        gt[gt >= 1] = 1
+        return train, gt
+
+    """
+    データのトレーニング
+    """
+    img_train, img_gtruth = make_date()
+
+    days = img_train.shape[0]
+    timesteps = img_train.shape[1]
+    h = img_train.shape[2]
+    w = img_train.shape[3]
+    l = img_train.shape[4]
+
+    model = CNN_convLSTM(
+        activation="relu",
+        loss="binary_crossentropy",
+        optimizer="Adadelta",
+        height=h, width=w, layer=l, days=days, timesteps=timesteps
+    )
+    hist = model.fit(
+        img_train[:1000:], img_gtruth[:1000], batch_size=10, epochs=500, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
+    try:
+        model.save(SAVE_dir + "model_test_set.h5")
+    except:
+        print("ahhhhhhh error in model.save")
+    return model, img_train, img_gtruth
+
+
+def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
+    """
+    画像の予測を行う
+    input:
+    model : 学習したモデル
+    img_test : テストデータ
+    target_ts : テストターゲットデータ
+
+    output:
+    imageをplt.show
+    """
+    start = start
+    frame = 7
+    print("start predicting from %d to %d" % (start, start + frame))
+    track = img_test[start:start + frame, :, :, :]
+    for i in range(15):
+        new_pos = model.predict(track[np.newaxis, :])
+        print(track.shape, new_pos[0, -1, :, :, :].shape)
+        new = new_pos[:, -1, :, :, :]
+        track = np.concatenate((track, new), axis=0)
+
+    for i in range(15):
+        fig = plt.figure(figsize=(10, 5))
+        """
+        予測画像の表示
+        """
+        ax = fig.add_subplot(121)
+        if i >= 7:
+            ax.text(1, 3, "Prediction!", fontsize=20, color="w")
+        else:
+            ax.text(1, 3, "Initial Time Series", fontsize=20)
+        # toplot = track[i, :, :, :]
+        toplot = track[i, :, :, 0]
+        plt.imshow(toplot)
+
+        """
+        Ground Truth の表示
+        """
+        ax = fig.add_subplot(122)
+        ax.text(1, 3, "Ground Truth", fontsize=20)
+        # toplot = img_test[start + i, :, :, :]
+        toplot = img_test[start + i, :, :, 0]
+        plt.imshow(toplot)
+        plt.savefig(SAVE_DIR + "animate_" + date + "_%i" % (i + 1))

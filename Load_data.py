@@ -53,7 +53,7 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir):
 
     target_month_list = os.listdir(TARGET_DIR)
     target_month_list.sort()
-
+    count = 0
     for month_dir in target_month_list:
         # if not month_dir.startswith("."):
         if month_dir == "201705":
@@ -62,7 +62,10 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir):
             target_day_list.sort()
             for day_dir in target_day_list:
                 if not day_dir.startswith("."):
+                # if day_dir == "20170501":
                     file_path = os.path.join(im_dir, day_dir)
+                    if count < 5:
+                        count += 1
                     print("---- TRY ----- " + day_dir[3:11])
                     try:
                         target_tmp = load_target(csv=file_path, imgdir=img_dir_path_dic[day_dir[3:11]])
