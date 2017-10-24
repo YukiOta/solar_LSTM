@@ -17,7 +17,7 @@ def main(save):
     print("done")
 
 if __name__ == '__main__':
-    SAVE_dir = "./RESULT/LSTM_test_2017_1020/"
+    SAVE_dir = "./RESULT/LSTM_test_"+ dt.datetime.today().strftime("%Y_%m_%d")+"/"
     if not os.path.isdir(SAVE_dir):
         os.makedirs(SAVE_dir)
     # 時間の表示
