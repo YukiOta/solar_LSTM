@@ -259,11 +259,19 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+        model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+        model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
+                             activation=activation, data_format="channels_last",
+                             return_sequences=True))
+        model.add(BatchNormalization())
+        model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
@@ -358,11 +366,11 @@ def train_convLSTM_with_test(SAVE_dir):
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+        model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
+        model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
