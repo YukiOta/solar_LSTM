@@ -299,14 +299,25 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     w = img_train.shape[3]
     l = img_train.shape[4]
 
+    batch_size = 10
+    epoch = 100
+    validation_split = 0.2
+
     model = CNN_convLSTM(
         activation="relu",
         loss="binary_crossentropy",
         optimizer="Adadelta",
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
+    with open(SAVE_dir + "setting.txt", "a") as f:
+        f.write("----about experiment setting-----\n")
+        f.write("(day, timesteps, h, w, l) : " +
+                str((days, timesteps, h, w, l)) + "\n")
+        f.write("batch size: " + str(batch_size) + "\n")
+        f.write("epoch: " + str(epoch) + "\n")
+        f.write("validation_split: " + str(validation_split) + "\n")
     hist = model.fit(
-        img_train, img_gtruth, batch_size=10, epochs=100, validation_split=0.1, verbose=1, callbacks=[TensorBoard(log_dir='./log/solar')])
+        img_train, img_gtruth, batch_size=batch_size, epochs=epoch, validation_split=validation_split, verbose=1, callbacks=[TensorBoard(log_dir='./log/solar')])
     try:
         model.save(SAVE_dir + "model_{}".format(str(date_list)) + ".h5")
     except:
