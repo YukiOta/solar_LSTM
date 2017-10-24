@@ -14,7 +14,7 @@ from PIL import Image
 from scipy import ndimage
 
 
-def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir):
+def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir, im_size=100):
 
     """ 画像の日付リストの獲得
     img_20170101 = np.array
@@ -53,7 +53,7 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir):
 
     target_month_list = os.listdir(TARGET_DIR)
     target_month_list.sort()
-    count = 0
+    # count = 0
     for month_dir in target_month_list:
         # if not month_dir.startswith("."):
         if month_dir == "201705":
@@ -64,12 +64,12 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir):
                 if not day_dir.startswith("."):
                 # if day_dir == "20170501":
                     file_path = os.path.join(im_dir, day_dir)
-                    if count < 5:
-                        count += 1
+                    # if count < 5:
+                    #    count += 1
                     print("---- TRY ----- " + day_dir[3:11])
                     try:
                         target_tmp = load_target(csv=file_path, imgdir=img_dir_path_dic[day_dir[3:11]])
-                        img_tmp = load_image(imgdir=img_dir_path_dic[day_dir[3:11]], size=(100, 100), norm=True)
+                        img_tmp = load_image(imgdir=img_dir_path_dic[day_dir[3:11]], size=(im_size, im_size), norm=True)
                         if len(target_tmp) == len(img_tmp):
                             target_tr.append(target_tmp)
                             date_list.append(day_dir[3:11])
