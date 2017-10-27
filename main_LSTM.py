@@ -271,10 +271,6 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
-                             return_sequences=True))
-        model.add(BatchNormalization())
         model.add(Convolution3D(filters=3, kernel_size=(3, 3, 3),
                                 padding="same", data_format="channels_last"))
 
@@ -308,7 +304,7 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     l = img_train.shape[4]
 
     batch_size = 10
-    epoch = 100
+    epoch = 1000
     validation_split = 0.2
 
     model = CNN_convLSTM(
@@ -449,7 +445,7 @@ def train_convLSTM_with_test(SAVE_dir):
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
     hist = model.fit(
-        img_train[:1000:], img_gtruth[:1000], batch_size=10, epochs=500, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
+        img_train[:1000:], img_gtruth[:1000], batch_size=10, epochs=1000, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
     try:
         model.save(SAVE_dir + "model_test_set.h5")
     except:

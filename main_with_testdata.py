@@ -11,6 +11,9 @@ import numpy as np
 
 
 def main(save):
+    with open(save + "setting.txt", "w") as f:
+        f.write("SAVE DIR: " + save + "\n")
+        f.write("epoch: 1000"+"\n")
     model, img_train, img_gtruth = LSTM.train_convLSTM_with_test(save)
     img_test = img_train[1004]
     LSTM.predict_convLSTM2D(model, img_test, save, date="test_data", start=0)
