@@ -329,7 +329,7 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     return model
 
 
-def train_convLSTM_with_test(SAVE_dir):
+def train_convLSTM_with_test(SAVE_dir, data_num=1200, time=15):
     """
     kerasでConvLSTMを実装する。
     input : SAVE_dir
@@ -376,16 +376,16 @@ def train_convLSTM_with_test(SAVE_dir):
         model.compile(loss=loss, optimizer=optimizer)
         return model
 
-    def make_date():
+    def make_date(data_num, time):
         '''
         人工データの作成。
         '''
         # test
-        time = 20
+        time = time
         row = 80
         col = 80
         filters = 1
-        training = 5000
+        training = data_num
         train = np.zeros((training, time, row, col, 1), dtype=np.float)
         gt = np.zeros((training, time, row, col, 1), dtype=np.float)
         # for i in range(1000):
@@ -430,7 +430,7 @@ def train_convLSTM_with_test(SAVE_dir):
     """
     データのトレーニング
     """
-    img_train, img_gtruth = make_date()
+    img_train, img_gtruth = make_date(data_num=data_num, time=time)
 
     days = img_train.shape[0]
     timesteps = img_train.shape[1]
@@ -445,7 +445,7 @@ def train_convLSTM_with_test(SAVE_dir):
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
     hist = model.fit(
-        img_train[:1000:], img_gtruth[:1000], batch_size=10, epochs=1000, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
+        img_train[:data_num-20], img_gtruth[:data_num-20], batch_size=10, epochs=1000, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
     try:
         model.save(SAVE_dir + "model_test_set.h5")
     except:
