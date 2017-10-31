@@ -3,3 +3,6 @@
 /experiment_log.md
 
 /RESULT
+/__pycache__
+/.ipynb_checkpoints
+
