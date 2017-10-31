@@ -10,10 +10,10 @@ import h5py
 # import seaborn as sns
 
 from keras.models import Sequential
-from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D, Convolution3D, ZeroPadding3D
-from keras.layers.core import Dense, Activation, Flatten, Dropout
+from keras.layers.convolutional import Convolution2D, ZeroPadding2D, Convolution3D
+from keras.layers.core import Dense, Activation, Flatten
 from keras.callbacks import EarlyStopping, TensorBoard
-from keras.optimizers import Adam, Adadelta, RMSprop
+# from keras.optimizers import Adam, Adadelta, RMSprop
 from keras.layers.convolutional_recurrent import ConvLSTM2D
 from keras.layers.normalization import BatchNormalization
 
@@ -381,11 +381,11 @@ def train_convLSTM_with_test(SAVE_dir):
         人工データの作成。
         '''
         # test
-        time = 15
+        time = 20
         row = 80
         col = 80
         filters = 1
-        training = 1200
+        training = 5000
         train = np.zeros((training, time, row, col, 1), dtype=np.float)
         gt = np.zeros((training, time, row, col, 1), dtype=np.float)
         # for i in range(1000):
@@ -465,35 +465,49 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
     imageをplt.show
     """
     start = start
-    frame = 7
+    frame = 10
     print("start predicting from %d to %d" % (start, start + frame))
     track = img_test[start:start + frame, :, :, :]
-    for i in range(15):
-        new_pos = model.predict(track[np.newaxis, :])
+    for i in range(16):
+        new_pos = model.predict(track[np.newaxis, :, :, :, :])
         print(track.shape, new_pos[0, -1, :, :, :].shape)
         new = new_pos[:, -1, :, :, :]
+        new[new > 0.5] = 1
+        new[new <= 0.5] = 0
         track = np.concatenate((track, new), axis=0)
 
     for i in range(15):
+        gt_im = img_test[start + i, :, :, 0]
+        test_im = track[i, :, :, 0]
+
+        plt.clf()
         fig = plt.figure(figsize=(10, 5))
+
         """
         予測画像の表示
         """
         ax = fig.add_subplot(121)
-        if i >= 7:
-            ax.text(1, 3, "Prediction!", fontsize=20, color="w")
+        ax.imshow(test_im, cmap="gray", interpolation="none")
+
+        if i >= frame:
+            ax.text(37, 3, "Prediction", color="orange", fontdict={
+                    "fontsize": 15, "fontweight": 'bold', "ha": "right", "va": "center"})
         else:
-            ax.text(1, 3, "Initial Time Series", fontsize=20)
-        # toplot = track[i, :, :, :]
-        toplot = track[i, :, :, 0]
-        plt.imshow(toplot)
+            ax.text(37, 3, "Initial Time", color="white", fontdict={
+                    "fontsize": 15, "fontweight": 'bold', "ha": "right", "va": "center"})
+        plt.xticks([])
+        plt.yticks([])
 
         """
-        Ground Truth の表示
+        Ground Truthの表示
         """
         ax = fig.add_subplot(122)
-        ax.text(1, 3, "Ground Truth", fontsize=20)
-        # toplot = img_test[start + i, :, :, :]
-        toplot = img_test[start + i, :, :, 0]
-        plt.imshow(toplot)
-        plt.savefig(SAVE_DIR + "animate_" + date + "_%i" % (i + 1))
+        ax.imshow(gt_im, cmap="gray", interpolation="none")
+        ax.text(37, 3, "Ground Truth", color="white", fontdict={
+                "fontsize": 15, "fontweight": 'bold', "ha": "right", "va": "center"})
+        plt.xticks([])
+        plt.yticks([])
+
+        plt.savefig(SAVE_DIR + "animate_" + date + "_%i" %
+                    (i + 1), cmap="gray", interpolation="none")
+        plt.clf()
