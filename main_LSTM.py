@@ -255,10 +255,6 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
                              input_shape=(None, height, width, layer),
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
-                             return_sequences=True))
-        model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
@@ -271,7 +267,7 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
                              activation=activation, data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(Convolution3D(filters=3, kernel_size=(3, 3, 3),
+        model.add(Convolution3D(filters=layer, kernel_size=(3, 3, layer),
                                 padding="same", data_format="channels_last"))
 
         model.compile(loss=loss, optimizer=optimizer)
@@ -304,12 +300,12 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     l = img_train.shape[4]
 
     batch_size = 10
-    epoch = 1000
+    epoch = 50
     validation_split = 0.2
 
     model = CNN_convLSTM(
         activation="relu",
-        loss="binary_crossentropy",
+        loss="mean_squared_error",
         optimizer="Adadelta",
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
@@ -477,8 +473,12 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
         track = np.concatenate((track, new), axis=0)
 
     for i in range(15):
-        gt_im = img_test[start + i, :, :, 0]
-        test_im = track[i, :, :, 0]
+        if track.shape[-1] == 0:
+            gt_im = img_test[start + i, :, :, 0]
+            test_im = track[i, :, :, 0]
+        else:
+            gt_im = img_test[start + i, :, :, :]
+            test_im = track[i, :, :, :]
 
         plt.clf()
         fig = plt.figure(figsize=(10, 5))

@@ -3,11 +3,9 @@
 import time
 import os
 import datetime as dt
-import h5py
 import argparse
 import Load_data as ld
 import main_LSTM as LSTM
-import numpy as np
 
 
 def main(img, target, save):
@@ -37,6 +35,7 @@ def main(img, target, save):
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data_dir",
@@ -48,9 +47,18 @@ if __name__ == '__main__':
         default="../data/PV_CSV/",
         help="choose your target dir"
     )
+    parser.add_argument(
+        "--save_dir",
+        default="./RESULT/AIST_LSTM/",
+        help="choose save dir"
+    )
+
+    taday_time = dt.datetime.today().strftime("%Y_%m_%d")
+
     args = parser.parse_args()
-    DATA_DIR, TARGET_DIR = args.data_dir, args.target_dir
-    SAVE_dir = "./RESULT/AIST_LSTM/" + dt.datetime.today().strftime("%Y_%m_%d") + "/"
+    DATA_DIR, TARGET_DIR, SAVE_dir = \
+        args.data_dir, args.target_dir, args.save_dir
+    SAVE_dir = SAVE_dir + dt.datetime.today().strftime("%Y_%m_%d") + "/"
     if not os.path.isdir(SAVE_dir):
         os.makedirs(SAVE_dir)
     # 時間の表示
