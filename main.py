@@ -12,7 +12,7 @@ def main(img, target, save):
     '''
     ここで、実験設定について書くテキストファイルを書きだす
     '''
-    im_size = 100
+    im_size = 50
     with open(save + "setting.txt", "w") as f:
         f.write("SAVE DIR: " + save + "\n")
         f.write("IMG  DIR: " + img + "\n")

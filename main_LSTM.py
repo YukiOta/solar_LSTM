@@ -7,18 +7,19 @@ import pandas as pd
 import time
 import Load_data as ld
 import h5py
+import seaborn as sns
 # import seaborn as sns
 
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D, ZeroPadding2D, Convolution3D
 from keras.layers.core import Dense, Activation, Flatten
 from keras.callbacks import EarlyStopping, TensorBoard
-# from keras.optimizers import Adam, Adadelta, RMSprop
+from keras import optimizers
 from keras.layers.convolutional_recurrent import ConvLSTM2D
 from keras.layers.normalization import BatchNormalization
 
 
-def CNN_model3(
+def CNN_model3(  # {{{
         activation="relu",
         loss="mean_squared_error",
         optimizer="Adadelta",
@@ -40,10 +41,25 @@ def CNN_model3(
     model.add(Dense(1))
 
     model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-    return model
+    return model  # }}}
 
 
-def data_plot(model, target, img, SAVE_dir, batch_size=10, date="hoge", save_csv=True):
+def save_history(history, result_file):
+    loss = history.history['loss']
+    acc = history.history['acc']
+    val_loss = history.history['val_loss']
+    val_acc = history.history['val_acc']
+    nb_epoch = len(acc)
+
+    with open(result_file, "w") as fp:
+        fp.write('epoch\tloss\tacc\tval_loss\tval_acc\n')
+        for i in range(nb_epoch):
+            fp.write('%d\t%f\t%f\t%f\t%f\n'
+                     % (i, loss[i], acc[i], val_loss[i], val_acc[i]))
+
+
+def data_plot(model, target, img, SAVE_dir, batch_size=10, date="hoge",  # {{{
+              save_csv=True):
 
     num = []
     time = []
@@ -80,7 +96,7 @@ def data_plot(model, target, img, SAVE_dir, batch_size=10, date="hoge", save_csv
     i = 0
     while os.path.exists(SAVE_dir + '{}{:d}.png'.format(filename, i)):
         i += 1
-    plt.savefig(SAVE_dir + '{}{:d}.png'.format(filename, i))
+    plt.savefig(SAVE_dir + '{}{:d}.png'.format(filename, i))  # }}}
 
 
 def save_target_and_prediction(target, pred, title, SAVE_dir):
@@ -119,7 +135,7 @@ def array2LSTM(array_1, num_frame=15):
     return array_2
 
 
-def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
+def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):  # {{{
 
     # for i in range(len(date_list)):
     for i in range(1):
@@ -164,8 +180,8 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
         print("Image and Target Ready")
 
         # parameter
-        activation = ["relu", "sigmoid"]
-        optimizer = ["adam", "adadelta", "rmsprop"]
+        # activation = ["relu", "sigmoid"]
+        # optimizer = ["adam", "adadelta", "rmsprop"]
         nb_epoch = [10, 25, 50]
         batch_size = [5, 10, 15]
 
@@ -181,7 +197,8 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
 
         # initialize check
         data_plot(
-            model=model, target=ts_target, img=ts_img, SAVE_dir=SAVE_dir, batch_size=10,
+            model=model, target=ts_target, img=ts_img, SAVE_dir=SAVE_dir,
+            batch_size=10,
             date=date_list[i], save_csv=True)
 
         early_stopping = EarlyStopping(patience=3, verbose=1)
@@ -193,7 +210,8 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
                          validation_split=0.1,
                          callbacks=[early_stopping])
         data_plot(
-            model=model, target=ts_target, img=ts_img, SAVE_dir=SAVE_dir, batch_size=10,
+            model=model, target=ts_target, img=ts_img, SAVE_dir=SAVE_dir,
+            batch_size=10,
             date=date_list[i], save_csv=True)
         # evaluate
         try:
@@ -207,6 +225,7 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
 
         try:
             model.save(SAVE_dir + "model_{}".format(str(date_list[i])) + ".h5")
+            save_history(hist, SAVE_dir + "result.txt")
         except:
             print("error in save model")
 
@@ -218,9 +237,9 @@ def training_conv2D(img_tr, target_tr, date_list, SAVE_dir):
         print("elapsed_time:{0}".format(tr_elapsed_time) + " [sec]")
 
     # error_lossの日を保存
-   #  with open(SAVE_dir + "test_loss.txt", "w") as f:
-   #      f.write(str(test_error_list))
-    return model
+    #  with open(SAVE_dir + "test_loss.txt", "w") as f:
+    #      f.write(str(test_error_list))
+    return model  # }}}
 
 
 def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
@@ -234,7 +253,7 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     ------------------------
     out : img?
     """
-    def CNN_convLSTM(
+    def CNN_convLSTM(  # {{{
             activation="relu",
             loss="binary_crossentropy",
             optimizer="Adadelta",
@@ -248,30 +267,38 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
         """
         model = Sequential()
 
-        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last", input_shape=(timesteps, height, width, layer)))
+        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last",
+        # input_shape=(timesteps, height, width, layer)))
         # model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              input_shape=(None, height, width, layer),
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
-        model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
-                             return_sequences=True))
+        # model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
+        #                      activation=activation,
+        #                      data_format="channels_last",
+        #                      return_sequences=True))
+        # model.add(BatchNormalization())
+        model.add(Convolution3D(filters=15, kernel_size=(3, 3, layer),
+                                padding="same", data_format="channels_last"))
         model.add(BatchNormalization())
         model.add(Convolution3D(filters=layer, kernel_size=(3, 3, layer),
                                 padding="same", data_format="channels_last"))
 
-        model.compile(loss=loss, optimizer=optimizer)
-        return model
+        model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+        return model  # }}}
 
     """
     データの読み込みとground truthの作成
@@ -299,29 +326,93 @@ def training_convLSTM2D(img_tr, target_tr, date_list, SAVE_dir):
     w = img_train.shape[3]
     l = img_train.shape[4]
 
-    batch_size = 10
-    epoch = 50
+    batch_size = 32
+    epoch = 80
     validation_split = 0.2
+    optimizer = optimizers.SGD()
 
+    # Lossの違いを確かめる
+    loss = "binary_crossentropy"
     model = CNN_convLSTM(
         activation="relu",
-        loss="mean_squared_error",
-        optimizer="Adadelta",
+        loss=loss,
+        optimizer=optimizer,
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
     with open(SAVE_dir + "setting.txt", "a") as f:
         f.write("----about experiment setting-----\n")
+        f.write("loss:" + loss + "\n")
         f.write("(day, timesteps, h, w, l) : " +
                 str((days, timesteps, h, w, l)) + "\n")
         f.write("batch size: " + str(batch_size) + "\n")
         f.write("epoch: " + str(epoch) + "\n")
         f.write("validation_split: " + str(validation_split) + "\n")
-    hist = model.fit(
-        img_train, img_gtruth, batch_size=batch_size, epochs=epoch, validation_split=validation_split, verbose=1, callbacks=[TensorBoard(log_dir='./log/solar')])
+        f.write("optimizer: " + str(optimizer) + "\n")
+
+    hist1 = model.fit(
+        img_train, img_gtruth, batch_size=batch_size, epochs=epoch,
+        validation_split=validation_split, verbose=0)
     try:
-        model.save(SAVE_dir + "model_{}".format(str(date_list)) + ".h5")
+        model.save(SAVE_dir + "model_{}_".format(str(date_list)) + loss + ".h5")
+        save_history(hist1, os.path.join(SAVE_dir, 'history_binary.txt'))
     except:
         print("ahhhhhhh error in model.save")
+
+    loss = "mean_squared_error"
+    model = CNN_convLSTM(
+        activation="relu",
+        loss=loss,
+        optimizer=optimizer,
+        height=h, width=w, layer=l, days=days, timesteps=timesteps
+    )
+    with open(SAVE_dir + "setting.txt", "a") as f:
+        f.write("----about experiment setting-----\n")
+        f.write("loss:" + loss + "\n")
+        f.write("(day, timesteps, h, w, l) : " +
+                str((days, timesteps, h, w, l)) + "\n")
+        f.write("batch size: " + str(batch_size) + "\n")
+        f.write("epoch: " + str(epoch) + "\n")
+        f.write("validation_split: " + str(validation_split) + "\n")
+
+    hist2 = model.fit(
+        img_train, img_gtruth, batch_size=batch_size, epochs=epoch,
+        validation_split=validation_split, verbose=0)
+    try:
+        model.save(SAVE_dir + "model_{}_".format(str(date_list)) + loss + ".h5")
+        save_history(hist2, os.path.join(SAVE_dir, 'history_mse.txt'))
+    except:
+        print("ahhhhhhh error in model.save")
+
+    # グラフを書く
+    sns.set()
+    plt.figure(figsize=(8, 8))
+    plt.plot(hist1.history['acc'], label='train_binary')
+    plt.plot(hist1.history['val_acc'], label='val_binary')
+    plt.plot(hist2.history['acc'], label='train_mse')
+    plt.plot(hist2.history['val_acc'], label='val_mse')
+    plt.legend()
+    plt.title("MSE vs Binary Cross Entropy")
+    plt.xlabel("epoch")
+    plt.ylabel("accuracy")
+    plt.savefig(SAVE_dir + "accuracy.png")
+
+    plt.figure(figsize=(8, 8))
+    plt.plot(hist1.history['loss'], label='train_binary')
+    plt.plot(hist1.history['val_loss'], label='val_binary')
+    plt.legend()
+    plt.title("binary_crossentropy")
+    plt.xlabel("epoch")
+    plt.ylabel("loss")
+    plt.savefig(SAVE_dir + "loss_binary.png")
+
+    plt.figure(figsize=(8, 8))
+    plt.plot(hist2.history['loss'], label='train_mse')
+    plt.plot(hist2.history['val_loss'], label='val_mse')
+    plt.legend()
+    plt.title("MSE")
+    plt.xlabel("epoch")
+    plt.ylabel("loss")
+    plt.savefig(SAVE_dir + "loss_mse.png")
     return model
 
 
@@ -347,23 +438,28 @@ def train_convLSTM_with_test(SAVE_dir, data_num=1200, time=15):
         """
         model = Sequential()
 
-        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last", input_shape=(timesteps, height, width, layer)))
+        # model.add(ZeroPadding3D((1, 1, 1), data_format="channels_last",
+        # input_shape=(timesteps, height, width, layer)))
         # model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              input_shape=(None, height, width, layer),
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=16, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
-                             activation=activation, data_format="channels_last",
+                             activation=activation,
+                             data_format="channels_last",
                              return_sequences=True))
         model.add(BatchNormalization())
         model.add(Convolution3D(filters=layer, kernel_size=(3, 3, layer),
@@ -441,7 +537,7 @@ def train_convLSTM_with_test(SAVE_dir, data_num=1200, time=15):
         height=h, width=w, layer=l, days=days, timesteps=timesteps
     )
     hist = model.fit(
-        img_train[:data_num-20], img_gtruth[:data_num-20], batch_size=10, epochs=1000, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
+        img_train[:data_num - 20], img_gtruth[:data_num - 20], batch_size=10, epochs=1000, validation_split=0.05, verbose=0, callbacks=[TensorBoard(log_dir='./log/test')])
     try:
         model.save(SAVE_dir + "model_test_set.h5")
     except:
@@ -449,7 +545,7 @@ def train_convLSTM_with_test(SAVE_dir, data_num=1200, time=15):
     return model, img_train, img_gtruth
 
 
-def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
+def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30, return_array=False):
     """
     画像の予測を行う
     input:
@@ -462,14 +558,17 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
     """
     start = start
     frame = 10
+    img_pred = []
+    append = img_pred.append
+
     print("start predicting from %d to %d" % (start, start + frame))
     track = img_test[start:start + frame, :, :, :]
     for i in range(16):
         new_pos = model.predict(track[np.newaxis, :, :, :, :])
         print(track.shape, new_pos[0, -1, :, :, :].shape)
         new = new_pos[:, -1, :, :, :]
-        new[new > 0.5] = 1
-        new[new <= 0.5] = 0
+        # new[new > 0.5] = 1
+        new[new <= 0] = 0
         track = np.concatenate((track, new), axis=0)
 
     for i in range(15):
@@ -479,7 +578,7 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
         else:
             gt_im = img_test[start + i, :, :, :]
             test_im = track[i, :, :, :]
-
+        append(test_im)
         plt.clf()
         fig = plt.figure(figsize=(10, 5))
 
@@ -511,3 +610,6 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30):
         plt.savefig(SAVE_DIR + "animate_" + date + "_%i" %
                     (i + 1), cmap="gray", interpolation="none")
         plt.clf()
+
+    if return_array is True:
+        return img_pred

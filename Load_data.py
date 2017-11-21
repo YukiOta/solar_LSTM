@@ -30,6 +30,9 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir, im_size=100):
     error_date_list = []
     img_tr = []
     target_tr = []
+    array_target = target_tr.append
+    array_date_list = date_list.append
+    array_imgtr = img_tr.append
 
     img_month_list = os.listdir(DATA_DIR)
     img_month_list.sort()
@@ -62,18 +65,19 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir, im_size=100):
             target_day_list.sort()
             for day_dir in target_day_list:
                 if not day_dir.startswith("."):
-                # if day_dir == "20170501":
+                    # if day_dir == "20170501":
                     file_path = os.path.join(im_dir, day_dir)
-                    # if count < 5:
-                    #    count += 1
+                    # if count < 3:
+                        # print("count" + str(count+1) + "/ 3")
+                        # count += 1
                     print("---- TRY ----- " + day_dir[3:11])
                     try:
                         target_tmp = load_target(csv=file_path, imgdir=img_dir_path_dic[day_dir[3:11]])
                         img_tmp = load_image(imgdir=img_dir_path_dic[day_dir[3:11]], size=(im_size, im_size), norm=True)
                         if len(target_tmp) == len(img_tmp):
-                            target_tr.append(target_tmp)
-                            date_list.append(day_dir[3:11])
-                            img_tr.append(img_tmp)
+                            array_target(target_tmp)
+                            array_date_list(day_dir[3:11])
+                            array_imgtr(img_tmp)
                             print("   OKAY")
                         else:
                             print("   数が一致しません on "+day_dir[3:11])
@@ -101,6 +105,7 @@ def load_image(imgdir, size, norm=True, median=True, median_size=3, mean=True):
     output: numpy array
     """
     images = []
+    append = images.append
     imglist = os.listdir(imgdir)
     imglist.sort()
     for filename in imglist:
@@ -109,12 +114,12 @@ def load_image(imgdir, size, norm=True, median=True, median_size=3, mean=True):
                 img = Image.open(os.path.join(imgdir, filename))
                 if img is not None:
                     img = img.resize(size)
-                    img = np.array(img)
+                    img = np.array(img, dtype=np.float32)
                     if norm is True:
                         img = img / 255.
                     if median is True:
                         img = ndimage.median_filter(img, median_size)
-                    images.append(img)
+                    append(img)
     images = np.array(images, dtype=np.float32)
     print("---------- Image Load Done")
     return images
