@@ -75,6 +75,10 @@ def Load_data(DATA_DIR, TARGET_DIR, SAVE_dir, im_size=100):
                         target_tmp = load_target(csv=file_path, imgdir=img_dir_path_dic[day_dir[3:11]])
                         img_tmp = load_image(imgdir=img_dir_path_dic[day_dir[3:11]], size=(im_size, im_size), norm=True)
                         if len(target_tmp) == len(img_tmp):
+                            # 11/24追加，暗い時間帯を抜いてみる
+                            target_tmp = target_tmp[40:-40]
+                            img_tmp = img_tmp[40:-40]
+
                             array_target(target_tmp)
                             array_date_list(day_dir[3:11])
                             array_imgtr(img_tmp)

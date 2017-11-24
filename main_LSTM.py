@@ -557,7 +557,8 @@ def predict_convLSTM2D(model, img_test, SAVE_DIR, date, start=30, return_array=F
     imageをplt.show
     """
     start = start
-    frame = 10
+    frame = 7
+    print("frame: ", frame)
     img_pred = []
     append = img_pred.append
 
